@@ -1,0 +1,24 @@
+<!-- Factory-owned file: agents must not edit it. Dependencies are added by the factory
+     (its scripts/AddDependency tool) at exact versions; shared settings live in
+     Directory.Build.props. -->
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <AssemblyName>Trysac.VirtualActorsLite</AssemblyName>
+    <RootNamespace>Trysac.VirtualActorsLite</RootNamespace>
+    <PackageId>Trysac.VirtualActorsLite</PackageId>
+    <Version>0.1.0</Version>
+    <Description>Run Orleans-style virtual actors in process with on-demand single activation per key, turn-based mailboxes, etag-checked persistent state and durable reminders</Description>
+    <Authors>Miguel Gomez</Authors>
+    <PackageLicenseExpression>MIT</PackageLicenseExpression>
+    <PackageProjectUrl>https://github.com/Trysac/u932-virtual-actors-lite</PackageProjectUrl>
+    <RepositoryUrl>https://github.com/Trysac/u932-virtual-actors-lite</RepositoryUrl>
+    <PackageReadmeFile>README.md</PackageReadmeFile>
+    <IsPackable>true</IsPackable>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <None Include="../README.md" Pack="true" PackagePath="/" />
+  </ItemGroup>
+
+</Project>
