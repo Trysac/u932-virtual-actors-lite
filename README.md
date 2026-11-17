@@ -1,45 +1,34 @@
-# virtual-actors-lite
+# Trysac.VirtualActorsLite
 
-[![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
-[![CI](https://github.com/Trysac/u932-virtual-actors-lite/actions/workflows/ci.yml/badge.svg)](https://github.com/Trysac/u932-virtual-actors-lite/actions/workflows/ci.yml)
+This library implements a lightweight, in-process virtual actor model designed for deterministic testing of concurrent entity state management. It solves the problem of race conditions and inconsistency when handling many independent entities (like accounts, devices, or sessions) that require strict single-activation, sequential turn-based processing, and persistent state across a simulated multi-silo cluster.
 
-Run Orleans-style virtual actors in process with on-demand single activation per key, turn-based mailboxes, etag-checked persistent state and durable reminders
+## Installation
 
-## Problem
+Add the NuGet package `Trysac.VirtualActorsLite` to your project.
 
-Describe in two or three sentences the concrete problem this utility solves, who hits it, and what
-they do today without it. Replace this paragraph when the first real feature lands.
-
-## Install
-
-NuGet package `Trysac.VirtualActorsLite`. Until it is published to nuget.org, build it from a release
-tag with `dotnet pack src/Library.csproj`, then reference the package:
-
-```xml
-<PackageReference Include="Trysac.VirtualActorsLite" Version="0.1.0" />
-```
-
-Requires .NET 10 or newer. No dependencies outside the base class library.
-
-## Usage
+## Usage Example
 
 ```csharp
 using Trysac.VirtualActorsLite;
 
-// Normalize trims surrounding whitespace and lower-cases the text.
-var name = Text.Normalize("  Hello World "); // "hello world"
+// Create a cluster with 3 simulated silos
+var cluster = TestCluster.Create(3, new ClusterOptions(IdleTimeout: TimeSpan.FromMinutes(2)));
 
-// Blank input is rejected explicitly instead of returning an empty string.
-Text.Normalize("   "); // throws BlankInputException ("input is blank")
+// Get a reference and invoke a method
+var counter = cluster.GetActor<CounterActor>("k1");
+var result = await counter.CallAsync(a => a.IncrementAsync());
 ```
 
-## Documentation
+## Public API Summary
 
-- [Architecture](docs/ARCHITECTURE.md) and [decisions](docs/decisions/)
-- [Testing](docs/TESTING.md) and [security](docs/SECURITY.md)
-- [Project record](docs/PROJECT.md) and [stack](docs/STACK.md)
-- [Changelog](CHANGELOG.md) and [contributing guide](CONTRIBUTING.md)
+- **`Actor`**: Base class; implement `OnActivateAsync`, `OnDeactivateAsync`, or `OnReminderAsync`. Access `Context` for persistence and messaging.
+- **`ActorContext`**: Provides `ReadStateAsync<T>`, `WriteStateAsync<T>`, `RegisterReminderAsync`, `UnregisterReminderAsync`, and `GetActor<TActor>`.
+- **`ActorRef<TActor>`**: Typed reference for `CallAsync` (with or without return values).
+- **`TestCluster`**: In-process container managing silos, directory, state, and reminders. Use `AdvanceAsync` for deterministic time progression.
+- **`ActorException`**: Throws with stable codes: `etag_conflict`, `invalid_period`, `reentrant_call`, `mailbox_full`, `invalid_key`, `silo_unavailable`, `deactivated`.
 
-## License
+## Why not Orleans?
 
-[MIT](LICENSE) (c) 2026 Miguel Gomez
+Orleans is a full-scale distributed runtime for production systems. `VirtualActorsLite` is a dependency-free, lightweight alternative designed specifically for local integration tests and simulations. It provides the same virtual actor semantics (single-activation, turn-based execution) while allowing fully deterministic execution using a manual clock, making it ideal for verifying complex logic without the overhead of networking or distributed infrastructure.
+
+See [docs/SECURITY.md](docs/SECURITY.md) for security and resource limits.

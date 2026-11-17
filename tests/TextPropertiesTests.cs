@@ -3,28 +3,16 @@ using FsCheck.Xunit;
 
 namespace Trysac.VirtualActorsLite.Tests;
 
-/// <summary>Property tests (FsCheck) of the invariants of <see cref="Text.Normalize"/>.</summary>
+/// <summary>Property tests for ManualClock monotonicity.</summary>
 public class TextPropertiesTests
 {
     [Property]
-    public bool NormalizingTwiceChangesNothing(NonNull<string> input)
+    public bool ManualClockAdvancesMonotonically(PositiveInt seconds)
     {
-        if (string.IsNullOrWhiteSpace(input.Get))
-        {
-            return true;
-        }
-        var once = Text.Normalize(input.Get);
-        return once == Text.Normalize(once);
-    }
-
-    [Property]
-    public bool OutputHasNoSurroundingWhitespace(NonNull<string> input)
-    {
-        if (string.IsNullOrWhiteSpace(input.Get))
-        {
-            return true;
-        }
-        var output = Text.Normalize(input.Get);
-        return output == output.Trim();
+        var clock = new ManualClock();
+        var before = clock.UtcNow;
+        var delta = TimeSpan.FromSeconds(seconds.Get % 10_000);
+        var after = clock.Advance(delta);
+        return after == before + delta && clock.UtcNow == after;
     }
 }
