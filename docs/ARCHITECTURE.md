@@ -1,31 +1,21 @@
 # Architecture
 
-## Purpose
+`Trysac.VirtualActorsLite` implements the virtual actor programming model in-process over three pluggable stores (`IActivationDirectory`, `IStateStore`, `IReminderStore`) and a deterministic `ManualClock`.
 
-`Trysac.VirtualActorsLite` is a small, dependency-free .NET library: Run Orleans-style virtual actors in process with on-demand single activation per key, turn-based mailboxes, etag-checked persistent state and durable reminders
+## Core Components
 
-## Shape
+1. **`TestCluster` and `Silo`**:
+   - `TestCluster` creates $N$ logical silos (`"s1"`, `"s2"`, ...) sharing a directory, state store, reminder store, and `ManualClock`.
+   - Incoming calls via `ActorRef<TActor>.CallAsync` pick a gateway silo using round-robin routing (or a custom `ClusterOptions.Router`).
+   - The gateway silo queries `IActivationDirectory.TryRegister`. If another live silo already owns the `ActorId`, the gateway forwards the message to the owner silo.
 
-```text
-caller code --> namespace Trysac.VirtualActorsLite (src/)
-                    |
-                    +-- static classes with pure functions; no I/O, no global mutable state
-                    +-- internal helpers (optional)
-```
+2. **`ActorActivation` and Turn-Based Mailbox**:
+   - Each activation owns a single-reader channel loop.
+   - On the first message, the loop instantiates the actor with `new()`, injects `ActorContext`, and awaits `OnActivateAsync()` before executing the message.
+   - Queue capacity is enforced against `ClusterOptions.MailboxCapacity`; when 1 call is executing and `MailboxCapacity` calls are queued, the next call throws `ActorException` with code `mailbox_full`.
+   - On idle deactivation (`InitiateDeactivateAsync`), the activation stops accepting new messages, drains already queued messages, awaits `OnDeactivateAsync()`, and unregisters itself from `IActivationDirectory`. Any call that races with deactivation is retried transparently on a fresh activation.
+   - On `KillSilo(siloId)`, the silo's directory entries are removed immediately and any queued messages on that silo fail with `ActorException` (`silo_unavailable`).
 
-- **Public API**: every `public` type and member of the assembly. `internal` types may change
-  without a major version.
-- **Errors**: invalid input throws an `ArgumentException` subclass of the library (such as
-  `BlankInputException`) documented with `<exception>`; null arguments throw
-  `ArgumentNullException`. The library never writes to the console or exits.
-- **Side effects**: none. If a feature needs I/O, accept a `Stream`, a `TextReader` or a small
-  interface instead of opening resources, and record the choice in an ADR.
-
-## Quality contract
-
-`scripts/Check/` is the single definition of the gates; `fabrica.json` tells the factory and CI how
-to run it. See [TESTING.md](TESTING.md).
-
-## Decisions
-
-Architecture decisions are recorded in [decisions/](decisions/) as numbered ADRs.
+3. **State and Reminders**:
+   - `ActorContext.ReadStateAsync<T>` and `WriteStateAsync<T>` persist JSON payloads through `IStateStore` and track the activation's latest etag. Mismatched etags throw `ActorException` (`etag_conflict`).
+   - `ActorContext.RegisterReminderAsync` validates that `period >= 1s` (`invalid_period` otherwise) and stores a `ReminderEntry` in `IReminderStore`. `TestCluster.AdvanceAsync` steps through due reminders in chronological order, firing missed periods once each through the target actor's mailbox.

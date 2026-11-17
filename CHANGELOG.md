@@ -9,4 +9,5 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Added
 
+- Added in-process virtual actor runtime (`Actor`, `ActorContext`, `ActorId`, `ActorRef<TActor>`, `TestCluster`, `ClusterOptions`, `ManualClock`, `ActorException`, and pluggable directory, state, and reminder stores).
 - Initial project structure from the factory utility template.

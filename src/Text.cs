@@ -1,13 +1,8 @@
 namespace Trysac.VirtualActorsLite;
 
-/// <summary>Text helpers of this library.</summary>
-public static class Text
+/// <summary>Internal text helpers.</summary>
+internal static class Text
 {
-    /// <summary>Trims surrounding whitespace and lower-cases the text.</summary>
-    /// <param name="input">The text to normalize.</param>
-    /// <returns>The trimmed, lower-cased text.</returns>
-    /// <exception cref="BlankInputException">Nothing is left after trimming, instead of an empty string.</exception>
-    /// <exception cref="ArgumentNullException"><paramref name="input"/> is null.</exception>
     public static string Normalize(string input)
     {
         ArgumentNullException.ThrowIfNull(input);
@@ -16,6 +11,7 @@ public static class Text
         {
             throw new BlankInputException();
         }
+
         return trimmed.ToLowerInvariant();
     }
 }
